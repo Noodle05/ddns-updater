@@ -1,4 +1,5 @@
-FROM arm32v7/node:6.11.3
+ARG BASE_IMAGE=node:6.11.3-alpine
+FROM ${BASE_IMAGE}
 
 COPY package.json /src/package.json
 RUN cd /src \

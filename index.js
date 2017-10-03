@@ -4,8 +4,8 @@ const request = require('request-promise');
 const NoIP = require('no-ip');
 const eventToPromise = require('event-to-promise');
 
-const FREQUENCY = parseInt(process.env.FREQUENCY, 21);
-const DETECT_FREQUENCY = parseInt(process.env.DETECT_FREQUENCY, 5);
+const FREQUENCY = parseInt(process.env.FREQUENCY || '21');
+const DETECT_FREQUENCY = parseInt(process.env.DETECT_FREQUENCY || '5');
 const USER_NAME = process.env.USER_NAME;
 const USER_PASSWD = process.env.USER_PASSWD;
 const USER_EPASSWD = process.env.USER_EPASSWD;
@@ -83,3 +83,5 @@ function updateIp(force) {
 
 setInterval(updateIp, updateInterval, true);
 setInterval(updateIp, detectInterval);
+
+updateIp(true);
