@@ -1,5 +1,5 @@
 {
-  "name": "noip-updater",
+  "name": "ddns-updater",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,8 +10,6 @@
   "dependencies": {
     "bluebird": "^3.5.0",
     "bunyan": "^1.8.12",
-    "event-to-promise": "^0.8.0",
-    "no-ip": "^1.0.0",
     "request": "^2.83.0",
     "request-promise": "^4.2.2"
   }

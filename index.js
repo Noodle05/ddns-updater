@@ -1,18 +1,13 @@
 var bunyan = require('bunyan');
 
 const request = require('request-promise');
-const NoIP = require('no-ip');
-const eventToPromise = require('event-to-promise');
+const Promise = require('bluebird');
 
 const FREQUENCY = parseInt(process.env.FREQUENCY || '21');
 const DETECT_FREQUENCY = parseInt(process.env.DETECT_FREQUENCY || '5');
-const USER_NAME = process.env.USER_NAME;
-const USER_PASSWD = process.env.USER_PASSWD;
-const USER_EPASSWD = process.env.USER_EPASSWD;
-const IPv6 = process.env.IPv6;
+const UPDATE_TOKEN = process.env.UPDATE_TOKEN;
 const DOMAIN = process.env.DOMAIN;
 
-var passwd = USER_PASSWD || Buffer.from(USER_EPASSWD, 'base64').toString('ascii');
 var updateInterval = FREQUENCY * 60 * 60 * 1000;
 var detectInterval = DETECT_FREQUENCY * 60 * 1000;
 
@@ -20,15 +15,16 @@ var previousIp = undefined;
 
 const ident_ipv4_url = 'https://v4.ident.me';
 const ident_ipv6_url = 'https://v6.ident.me';
-const noip_url = 'https://dynupdate.no-ip.com/nic/update';
+const provider_url = 'https://dynv6.com/api/update';
 
 const logger = bunyan.createLogger({
-    name: 'noip-updater',
+    name: 'ddns-updater',
     level: 'trace'
 });
 
-logger.info('Update no-ip on ' + (IPv6 ? 'IPv6' : 'IPv4') + 
-    ' at frequency of ' + FREQUENCY + ' days' + ' detect ip change frequency ' + DETECT_FREQUENCY + ' minutes');
+logger.info('Update DDNS ',
+    ' at frequency of ', FREQUENCY, ' days,',
+    ' detect ip change frequency ', DETECT_FREQUENCY, ' minutes');
 
 var ident_options = {
     method: 'GET',
@@ -46,41 +42,34 @@ function getIpAddress(v6) {
     return request(options).then(ip => {
         logger.trace('Get ip address', ip);
         return Promise.resolve(ip.address);
-    });
+    }).catch(err => {
+        logger.error('Get ip address failed');
+        return Promise.resolve(undefined);
+    });;
 }
 
-function updateIpAddress(host, ip, user, passwd) {
+function updateIpAddress(host, ipv4, ipv6, token) {
     logger.debug('Update IP address');
-    logger.trace('hostname: ' + host + ', ip: ' + ip + ', user: ' + user);
-    var noip = new NoIP({
-        hostname: host,
-        user: user,
-        pass: passwd,
-    });
+    logger.trace('hostname:', host, ', IPv4:', ipv4, ', IPv6:', ipv6);
 
-    noip.update(ip);
+    var options = {
+        uri: provider_url + '?hostname=' + host
+                + '&token=' + token + '&ipv4=' + ipv4
+                + (ipv6 ? '&ipv6=' + ipv6 : ''),
+        method: 'GET',
+        timeout: 3000,
+    };
 
-    return eventToPromise.multi(
-        noip,
-        [ 'success' ],
-        [ 'error' ]);
-
+    return request(options);
 }
 
 function updateIp(force) {
-    logger.trace('Update IP address', (force ? 'Force' : ''));
-    return getIpAddress(IPv6).then(ip => {
-        if (force || previousIp !== ip) {
-            logger.trace('Going to update IP to:', ip);
-            return updateIpAddress(DOMAIN, ip, USER_NAME, passwd).then(v => {
-                previousIp = ip;
-                return Promise.resolve(v);
-            });
-        } else {
-            logger.trace('No need to update');
-            return Promise.resolve([false, ip]);
-        }
-    }).then(values => logger.info('Changed', values[0], 'New ip', values[1]))
+    logger.trace((force ? 'Force update' : 'Update'), 'IP address');
+
+    return Promise.join(getIpAddress(), getIpAddress(true),
+        function(ipv4, ipv6) {
+            return updateIpAddress(DOMAIN, ipv4, ipv6, UPDATE_TOKEN);
+        }).then(v=> logger.info(v))
         .catch(err => logger.error(err));
 }
 
