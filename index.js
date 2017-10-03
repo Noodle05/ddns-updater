@@ -70,14 +70,16 @@ function updateIpAddress(host, ip, user, passwd) {
 function updateIp(force) {
     logger.trace('Update IP address', (force ? 'Force' : ''));
     return getIpAddress(IPv6).then(ip => {
-        logger.trace('Going to update IP to: ', ip);
         if (force || previousIp !== ip) {
+            logger.trace('Going to update IP to:', ip);
             return updateIpAddress(DOMAIN, ip, USER_NAME, passwd).then(v => {
                 previousIp = ip;
-                return v;
+                return Promise.resolve(v);
             });
+        } else {
+            logger.trace('No need to update');
         }
-    }).then(v => logger.info(v))
+    }).then(values => logger.info('Changed', values[0], 'New ip', values[1]))
         .catch(err => logger.error(err));
 }
 
