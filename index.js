@@ -11,7 +11,8 @@ const DOMAIN = process.env.DOMAIN;
 var updateInterval = FREQUENCY * 60 * 60 * 1000;
 var detectInterval = DETECT_FREQUENCY * 60 * 1000;
 
-var previousIp = undefined;
+var previousIPv4 = undefined;
+var previousIPv6 = undefined;
 
 const ident_ipv4_url = 'https://v4.ident.me';
 const ident_ipv6_url = 'https://v6.ident.me';
@@ -37,10 +38,10 @@ function getIpAddress(v6) {
     var options = {};
     Object.assign(options, ident_options);
     options['uri'] = (v6 ? ident_ipv6_url : ident_ipv4_url) + '/.json';
-    logger.debug('uri', options['uri']);
+    logger.trace('uri', options['uri']);
 
     return request(options).then(ip => {
-        logger.trace('Get ip address', ip);
+        logger.debug('Get ip address', ip);
         return Promise.resolve(ip.address);
     }).catch(err => {
         logger.error('Get ip address failed');
@@ -68,7 +69,19 @@ function updateIp(force) {
 
     return Promise.join(getIpAddress(), getIpAddress(true),
         function(ipv4, ipv6) {
-            return updateIpAddress(DOMAIN, ipv4, ipv6, UPDATE_TOKEN);
+            if (force || ipv4 !== previousIPv4 || ipv6 !== previousIPv6) {
+                logger.trace('Update IP addresses');
+                return updateIpAddress(DOMAIN, ipv4, ipv6, UPDATE_TOKEN)
+                    .then(v => {
+                        logger.debug('Update IP address success, set previous IP address to new value.');
+                        previousIPv4 = ipv4;
+                        previousIPv6 = ipv6;
+                        return Promise.resolve(v);
+                    });
+            } else {
+                logger.trace('No need to update IP addresses');
+                return Promise.resolve('Not changed');
+            }
         }).then(v=> logger.info(v))
         .catch(err => logger.error(err));
 }
