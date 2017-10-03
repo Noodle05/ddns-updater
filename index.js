@@ -78,6 +78,7 @@ function updateIp(force) {
             });
         } else {
             logger.trace('No need to update');
+            return Promise.resolve([false, ip]);
         }
     }).then(values => logger.info('Changed', values[0], 'New ip', values[1]))
         .catch(err => logger.error(err));
