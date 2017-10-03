@@ -27,7 +27,8 @@ const logger = bunyan.createLogger({
     level: 'trace'
 });
 
-logger.info('Update no-ip on ' + (IPv6 ? 'IPv6' : 'IPv4') + ' at frequency of ' + FREQUENCY + ' days');
+logger.info('Update no-ip on ' + (IPv6 ? 'IPv6' : 'IPv4') + 
+    ' at frequency of ' + FREQUENCY + ' days' + ' detect ip change frequency ' + DETECT_FREQUENCY + ' minutes');
 
 var ident_options = {
     method: 'GET',
@@ -67,6 +68,7 @@ function updateIpAddress(host, ip, user, passwd) {
 }
 
 function updateIp(force) {
+    logger.trace('Update IP address', (force ? 'Force' : ''));
     return getIpAddress(IPv6).then(ip => {
         logger.trace('Going to update IP to: ', ip);
         if (force || previousIp !== ip) {

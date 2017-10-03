@@ -1,4 +1,4 @@
-FROM node:6.11.3-alpine
+FROM arm32v7/node:6.11.3
 
 COPY package.json /src/package.json
 RUN cd /src \
